@@ -74,10 +74,13 @@ async function bajar() {
       return;
     }
     if (r.j.rev === NB.meta.rev && !NB.meta.dirty) return; // ya estamos al día
+    const hoyK = todayKey(), antes = ((S.days[hoyK] || {}).salud || {}).ts;
     S = Object.assign(defaults(), NB.meta.dirty && S.profile ? mezclar(S, srv) : srv);
     localStorage.setItem(KEY, JSON.stringify(S));
     NB.meta.rev = r.j.rev; NB.meta.last = Date.now(); guardarMeta();
     refrescarSiSePuede();
+    const despues = ((S.days[hoyK] || {}).salud || {}).ts;
+    if (despues && despues !== antes) { S.atajoListo = true; toast('Llegaron tus pasos del iPhone [[heart]]'); }
     if (NB.meta.dirty) subir();
   } catch (e) { }
 }
@@ -106,6 +109,9 @@ function mezclar(a, b) {
     const d = { ...nuevo, meals: {}, ex: unirIds(da.ex, db.ex) };
     for (const m of MEALS) d.meals[m.id] = unirIds((da.meals || {})[m.id], (db.meals || {})[m.id]);
     d.u = Math.max(da.u || 0, db.u || 0);
+    const sa = da.salud, sb = db.salud;
+    if (sa || sb) d.salud = !sa ? sb : !sb ? sa : (sa.ts >= sb.ts ? sa : sb);
+    d.steps = Math.max(da.steps || 0, db.steps || 0);
     out.days[k] = d;
   }
   const w = new Map();
@@ -286,23 +292,23 @@ function pintarRanking() {
   else if (RK.error && !d) cuerpo = `<div class="empty"><div class="bear">${bearSVG('worried')}</div>${esc(RK.error)}</div>`;
   else if (d) {
     cuerpo = `
-      <div class="rank-hero">
-        <div class="bear">${bearSVG(lider ? 'cheer' : 'sleepy')}</div>
+      <div class="rank-hero anim">
+        <div class="bear">${lider && !empate ? `<span class="crown">${EMO.crown}</span>` : ''}${bearSVG(lider ? 'cheer' : 'sleepy')}</div>
         <div><small class="muted">${rangoTexto(d)}</small>
           <h2>${!lider ? 'Nadie ha quemado nada todavía' : empate ? '¡Van empatados!' : `¡${esc(lider.nombre)} va ganando!`}</h2>
-          ${lider && !empate ? `<p class="small" style="margin:4px 0 0">${fmt(lider.kcal)} kcal quemadas [[star]]</p>` : '<p class="small muted" style="margin:4px 0 0">A moverse [[heart]]</p>'}
+          ${lider && !empate ? `<p class="small" style="margin:4px 0 0"><span data-count="${lider.kcal}">0</span> kcal quemadas [[star]]</p>` : '<p class="small muted" style="margin:4px 0 0">A moverse [[heart]]</p>'}
         </div>
       </div>
       <div class="list rank-list">${filas.map((f, i) => `
-        <div class="rank-row ${f.yo ? 'yo' : ''}">
+        <div class="rank-row anim ${f.yo ? 'yo' : ''} ${i === 0 && f.kcal > 0 ? 'first' : ''}" style="animation-delay:${120 + i * 90}ms">
           <span class="pos" style="background:${f.kcal > 0 ? medalla(i) : '#f4ece9'}">${i + 1}</span>
           <div class="in">
             <b>${esc(f.nombre)}${f.yo ? ' <em>(tú)</em>' : ''}</b>
             <small>${!f.empezo ? 'Todavía no empieza' : `${fmt(f.min)} min de ejercicio · ${f.dias} ${f.dias === 1 ? 'día activo' : 'días activos'}`}</small>
-            <div class="bar"><i style="width:${f.kcal / max * 100}%;background:${i === 0 && f.kcal > 0 ? 'linear-gradient(90deg,var(--accent),var(--red))' : 'var(--accent)'}"></i></div>
+            <div class="bar"><i data-w="${f.kcal / max * 100}%" style="width:0;transition-delay:${250 + i * 90}ms;background:${i === 0 && f.kcal > 0 ? 'linear-gradient(90deg,var(--accent),var(--red))' : 'var(--accent)'}"></i></div>
             ${f.mejor && d.periodo !== 'hoy' ? `<small>Mejor día: ${fmtShort(f.mejor.dia)} · ${fmt(f.mejor.kcal)} kcal</small>` : ''}
           </div>
-          <span class="kc">${fmt(f.kcal)}<small>kcal</small></span>
+          <span class="kc"><span data-count="${f.kcal}">0</span><small>kcal</small></span>
         </div>`).join('')}</div>
       ${RK.cargando ? '<div class="spin"></div>' : ''}`;
   }
@@ -312,6 +318,7 @@ function pintarRanking() {
     ${cuerpo}
     <p class="muted small" style="margin:14px 4px 0;line-height:1.5">Cuenta las calorías de <b>actividad</b>: el ejercicio que anotas más los pasos por encima de tu nivel de actividad. El metabolismo en reposo no cuenta, para que sea justo.</p>`);
   RK.abierto = true; // openSheet acaba de correr el cleanup anterior
+  if (d && !RK.cargando) animarRanking(lider && !empate);
   sheetCleanup = () => { RK.abierto = false; };
 }
 async function cargarRanking() {
@@ -325,10 +332,142 @@ async function cargarRanking() {
   }
   RK.cargando = false; pintarRanking();
 }
-ACT.ranking = async () => {
+ACT.ranking = async (el, e) => {
+  // El botón se aplasta, salen corazones del dedo y luego abre
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  if (e && e.clientX) burst(e.clientX, e.clientY, 10);
+  await new Promise(r => setTimeout(r, sinMovimiento() ? 0 : 280));
   RK.abierto = true; RK.data = null;
   pintarRanking();
   if (NB.meta.dirty && !S.demo) await subir(); // que lo último de hoy ya cuente
   cargarRanking();
 };
-ACT.rkp = el => { RK.periodo = el.dataset.v; cargarRanking(); };
+ACT.rkp = (el, e) => {
+  if (RK.periodo === el.dataset.v) return;
+  RK.periodo = el.dataset.v;
+  if (e && e.clientX) burst(e.clientX, e.clientY, 6);
+  cargarRanking();
+};
+
+/* ---------------- Atajo de iPhone (pasos y energía activa de Salud) ---------------- */
+const NOMBRE_ATAJO = 'Osita Salud';
+const AT = { token: null, ultimo: null, error: '' };
+const atajoListo = () => !!S.atajoListo || Object.values(S.days || {}).some(d => d && d.salud);
+const urlAtajo = () => `${API}/api/salud?t=${AT.token}`;
+
+function pintarAtajo() {
+  const paso = (n, html) => `<li><span class="n">${n}</span><div>${html}</div></li>`;
+  openSheet(`${sheetHead('Pasos del iPhone')}
+    <div class="empty" style="padding:0 0 6px"><div class="bear" style="width:86px">${toriSticker('power')}</div>
+      Las páginas web no pueden leer la app Salud, pero un <b>Atajo</b> del iPhone sí, y nos manda tus pasos y calorías activas.</div>
+    ${!AT.token ? (AT.error ? `<p class="login-err">${esc(AT.error)}</p>` : '<div class="spin"></div>') : `
+    <div class="card" style="margin-top:6px">
+      <h3>${icon('link')} Tu dirección secreta</h3>
+      <p class="muted small" style="margin:4px 0 8px">Es solo tuya: con ella el atajo guarda en tu cuenta. No la compartas.</p>
+      <div class="url-box" id="atUrl">${esc(urlAtajo())}</div>
+      <button class="btn" data-act="atajoCopiar">${icon('copy')} Copiar dirección</button>
+      <p class="nube-st ${AT.ultimo ? 'ok' : 'muted'}" style="margin-top:10px">${AT.ultimo ? `Último envío del iPhone: ${haceCuanto(AT.ultimo)}` : 'Todavía no ha llegado nada del iPhone'}</p>
+    </div>
+    <div class="card">
+      <h3>${icon('sparkle')} Arma el atajo (una sola vez)</h3>
+      <ol class="pasos">
+        ${paso(1, `Abre la app <b>Atajos</b>, toca <b>+</b> y ponle de nombre exactamente <b>${NOMBRE_ATAJO}</b>.`)}
+        ${paso(2, `Agrega <b>Buscar muestras de salud</b>. Tipo: <b>Pasos</b>. Agrega el filtro <b>Fecha de inicio · es hoy</b>. En <b>Agrupar por</b> elige <b>Día</b>.`)}
+        ${paso(3, `Agrega <b>Calcular estadísticas</b> y elige <b>Suma</b>.`)}
+        ${paso(4, `Repite los pasos 2 y 3 pero con <b>Energía activa</b>.`)}
+        ${paso(5, `Agrega <b>Obtener contenido de URL</b> y pega la dirección de arriba. Toca la flechita: Método <b>POST</b>, Cuerpo de la solicitud <b>JSON</b>.`)}
+        ${paso(6, `Agrega dos campos tipo <b>Número</b>: <code>pasos</code> con la primera <b>Estadísticas</b> y <code>kcal</code> con la segunda.`)}
+        ${paso(7, `Toca el botón de reproducir para probarlo. La primera vez el iPhone te pide permiso para leer Salud: dale <b>Permitir</b>.`)}
+      </ol>
+    </div>
+    <div class="card">
+      <h3>${icon('bolt')} Que se mande solo (opcional)</h3>
+      <ol class="pasos">
+        ${paso(1, `En Atajos ve a <b>Automatización</b> → <b>+</b> → <b>App</b>.`)}
+        ${paso(2, `Elige la app que más abres (WhatsApp, Instagram...) → <b>Se abre</b> → <b>Ejecutar inmediatamente</b>.`)}
+        ${paso(3, `Escoge el atajo <b>${NOMBRE_ATAJO}</b>. Listo: cada vez que abras esa app se actualizan tus pasos.`)}
+      </ol>
+      <p class="muted small" style="margin:8px 2px 0">Con el teléfono bloqueado el iPhone no deja leer Salud; por eso conviene que corra al abrir una app y no a una hora fija.</p>
+    </div>
+    <button class="btn" data-act="atajoProbar">${icon('steps')} Probar el atajo ahora</button>
+    <button class="btn ghost" data-act="atajoNuevo">Cambiar mi dirección secreta</button>
+    <p class="muted small" style="margin:8px 4px 0;line-height:1.5">Si usas Apple Watch, "Agrupar por Día" evita que los pasos del reloj y del teléfono se cuenten doble. La energía activa incluye tu movimiento normal; solo cuenta lo que pasa de tu nivel de actividad, y se usa lo mayor entre eso y lo que anotas a mano.</p>`}`);
+}
+async function abrirAtajo() {
+  AT.error = '';
+  pintarAtajo();
+  try {
+    const r = await api('/api/atajo');
+    if (!r.ok) throw new Error(r.j.error || 'No se pudo');
+    AT.token = r.j.token; AT.ultimo = r.j.ultimo;
+  } catch (e) { AT.error = navigator.onLine ? 'No se pudo cargar. Intenta de nuevo.' : 'Necesitas internet para configurar esto'; }
+  if (!$('#sheetWrap').hidden) pintarAtajo();
+}
+function correrAtajo() {
+  location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(NOMBRE_ATAJO);
+}
+ACT.atajo = () => abrirAtajo();
+ACT.traer = () => {
+  if (S.demo) return toast('Quita los datos de ejemplo primero');
+  if (!atajoListo()) return abrirAtajo();
+  toast('Abriendo el atajo... luego regresa aquí [[heart]]');
+  setTimeout(correrAtajo, 400);
+};
+ACT.atajoProbar = () => { S.atajoListo = true; correrAtajo(); };
+ACT.atajoCopiar = async () => {
+  try { await navigator.clipboard.writeText(urlAtajo()); toast('Dirección copiada [[star]]'); }
+  catch (e) {
+    const el = $('#atUrl'); const rg = document.createRange(); rg.selectNodeContents(el);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg);
+    toast('Mantén presionado para copiar');
+  }
+};
+ACT.atajoNuevo = async () => {
+  if (!(await confirmSheet('¿Cambiar tu dirección secreta? Tendrás que pegar la nueva en el atajo.', 'Sí, cambiar', 'normal'))) return abrirAtajo();
+  try { const r = await api('/api/atajo/nuevo', { method: 'POST' }); if (r.ok) { AT.token = r.j.token; AT.ultimo = null; } } catch (e) { }
+  abrirAtajo();
+};
+
+/* ---------------- Animaciones del ranking ---------------- */
+const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Lluvia de corazones, estrellas y fresitas desde un punto
+function burst(x, y, n = 12) {
+  if (sinMovimiento()) return;
+  const tipos = ['heart', 'star', 'berry', 'heart', 'star'];
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('span');
+    s.className = 'burst-p';
+    s.innerHTML = EMO[tipos[i % tipos.length]];
+    const ang = (Math.PI * 2 * i) / n + Math.random() * .5, dist = 60 + Math.random() * 80;
+    s.style.left = x + 'px'; s.style.top = y + 'px';
+    s.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+    s.style.setProperty('--dy', Math.sin(ang) * dist - 30 + 'px');
+    s.style.setProperty('--r', (Math.random() * 120 - 60) + 'deg');
+    s.style.setProperty('--s', (.7 + Math.random() * .6).toFixed(2));
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 950);
+  }
+}
+// Los números suben desde 0
+function contar(root) {
+  root.querySelectorAll('[data-count]').forEach(el => {
+    const to = +el.dataset.count;
+    if (sinMovimiento() || !to) { el.textContent = fmt(to); return; }
+    const t0 = performance.now(), dur = 950;
+    const paso = t => {
+      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(to * e);
+      if (p < 1) requestAnimationFrame(paso);
+    };
+    requestAnimationFrame(paso);
+  });
+}
+function animarRanking(lider) {
+  const sh = $('#sheet'); if (!sh) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    sh.querySelectorAll('.rank-row .bar i[data-w]').forEach(b => (b.style.width = b.dataset.w));
+    contar(sh);
+    const h = sh.querySelector('.rank-hero .bear');
+    if (lider && h) { const r = h.getBoundingClientRect(); setTimeout(() => burst(r.left + r.width / 2, r.top + r.height / 2, 14), 250); }
+  }));
+}

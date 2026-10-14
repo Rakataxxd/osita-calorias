@@ -33,3 +33,10 @@ CREATE TABLE IF NOT EXISTS intentos (
   ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS intentos_u ON intentos (usuario, ts);
+-- Código secreto del Atajo de iPhone de cada persona (solo sirve para mandar pasos/energía)
+CREATE TABLE IF NOT EXISTS atajos (
+  usuario TEXT PRIMARY KEY,
+  token TEXT UNIQUE NOT NULL,
+  creado INTEGER NOT NULL,
+  ultimo INTEGER
+);

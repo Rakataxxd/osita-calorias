@@ -73,6 +73,7 @@ function load() {
 }
 let S = load();
 function save() {
+  try { S.tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { }
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('No se pudo guardar [[cry]]'); }
   if (typeof nubeMarcar === 'function') nubeMarcar();
 }
@@ -143,9 +144,20 @@ function totals(k) {
   const w = weightAt(k);
   t.exList = d.ex.reduce((a, e) => a + e.kcal, 0);
   t.stepK = stepsKcal(d.steps || 0, w);
-  t.ex = t.exList + t.stepK;
+  t.manual = t.exList + t.stepK;
+  t.appleK = appleExtra(d, k);
+  t.fromApple = t.appleK > t.manual;
+  t.ex = Math.max(t.manual, t.appleK);
   return t;
 }
+// Energía activa del iPhone: incluye el movimiento normal del día, que ya está en el nivel
+// de actividad, así que solo cuenta lo que pasa de eso. Se usa lo mayor entre esto y lo anotado.
+function appleExtra(d, k) {
+  if (!d.salud || d.salud.kcal == null) return 0;
+  const c = calc(k);
+  return Math.max(0, d.salud.kcal - c.bmr * (S.profile.act - 1));
+}
+const horaDe = ts => { const d = new Date(ts); return `${d.getHours()}:${pad(d.getMinutes())}`; };
 function dayStatus(k) {
   const t = totals(k);
   if (!t.n) return '';
@@ -347,7 +359,9 @@ function viewHoy() {
   <section class="card ex-list">
     <div class="card-head"><h3>${icon('bolt')} Ejercicio</h3><button class="link" data-act="ex">+ Agregar</button></div>
     ${d.ex.length ? `<div class="items">${d.ex.map(e => `<button class="item" data-act="exdel" data-id="${e.id}"><div class="in"><b>${esc(e.name)}</b><small>${e.min ? e.min + ' min' : 'manual'}</small></div><span class="ik">−${fmt(e.kcal)}</span></button>`).join('')}</div>` : '<p class="muted small" style="margin:8px 0 0">Caminar, bailar, gym... todo suma y te da más calorías para comer.</p>'}
+    ${d.salud ? `<div class="salud-row">${emo('heart')}<div class="in"><b>Del iPhone · ${horaDe(d.salud.ts)}</b>${fmt(d.salud.pasos)} pasos · ${fmt(d.salud.kcal)} kcal activas${t.fromApple ? ` · <em>cuentan ${fmt(t.appleK)} kcal extra</em>` : ''}</div></div>` : ''}
     <button class="steps-row" data-act="steps" style="width:100%;text-align:left">${icon('steps')}<div class="in"><b>${fmt(d.steps || 0)} pasos</b>${d.steps ? (t.stepK ? `≈ ${fmt(t.stepK)} kcal extra` : `Tu nivel de actividad ya cuenta ${fmt(baseSteps())} pasos`) : 'Toca para anotar tus pasos del día'}</div>${icon('edit')}</button>
+    ${typeof NB !== 'undefined' && NB.ses ? `<div class="row-btns"><button class="pill-btn" data-act="traer">${icon('steps')} Traer del iPhone</button><button class="pill-btn ghosty" data-act="atajo">${icon('edit')} Configurar</button></div>` : ''}
   </section>
 
   <section class="card">

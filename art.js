@@ -41,6 +41,7 @@ const EMO = {
   target: `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="#fff" stroke="${INK}" stroke-width="2.4"/><circle cx="16" cy="16" r="8" fill="#f6a5b6" stroke="${INK}" stroke-width="2"/><circle cx="16" cy="16" r="3.6" fill="#e5505e" stroke="${INK}" stroke-width="1.8"/></svg>`,
   box: `<svg viewBox="0 0 32 32"><path d="M5 11l11-5 11 5v12l-11 5-11-5z" fill="#f3d3a6" stroke="${INK}" stroke-width="2.3" stroke-linejoin="round"/><path d="M5 11l11 5 11-5M16 16v12" stroke="${INK}" stroke-width="2.1" fill="none" stroke-linejoin="round"/><circle cx="10" cy="19" r="1" fill="${INK}"/><circle cx="13" cy="20.3" r="1" fill="${INK}"/></svg>`,
   tori: `<img src="img/tori.png" alt="">`,
+  crown: `<svg viewBox="0 0 40 30"><path d="M4 25 2 7l10 8 8-12 8 12 10-8-2 18z" fill="#ffd24d" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/><circle cx="20" cy="17" r="3" fill="#e5505e" stroke="${INK}" stroke-width="1.6"/><path d="M5 25h30" stroke="${INK}" stroke-width="2.6"/></svg>`,
 };
 function emo(name) { return `<span class="emo">${EMO[name] || ''}</span>`; }
 // Cambia los [[nombre]] del texto por su dibujito
@@ -74,6 +75,7 @@ const ICONS = {
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   pencilPlus: '<path d="M12 5v14M5 12h14"/>',
   camera: '<path d="M4 8h3l1.8-2.5h6.4L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.6"/>',
+  link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>',
 };
 function icon(name, cls = '') {
   return `<svg viewBox="0 0 24 24" class="ic ${cls}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
