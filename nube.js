@@ -255,3 +255,80 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) subir(); else if (!NB.meta.dirty) bajar(); else subir();
 });
 setInterval(() => { if (!document.hidden && NB.ses && !S.demo) { if (NB.meta.dirty) subir(); else bajar(); } }, 120000);
+
+/* ---------------- Ranking: quién quemó más calorías ---------------- */
+const PERIODOS = [['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes'], ['anio', 'Año'], ['todo', 'Todo']];
+const RK = { periodo: 'semana', data: null, cargando: false, error: '', abierto: false };
+
+function rankingCTA() {
+  if (!NB.ses) return '';
+  return `<button class="card rank-cta" data-act="ranking">
+    <div class="rank-st">${bearSVG('cheer')}</div>
+    <div class="in"><b>Ranking</b><small>¿Quién quemó más calorías?</small></div>${icon('chevR')}
+  </button>`;
+}
+function rangoTexto(d) {
+  if (!d) return '';
+  if (d.periodo === 'hoy') return 'Solo hoy';
+  if (d.periodo === 'todo') return 'Desde el primer día';
+  return `Del ${fmtShort(d.desde)} a hoy`;
+}
+function pintarRanking() {
+  if (!RK.abierto) return;
+  const d = RK.data && RK.data.periodo === RK.periodo ? RK.data : null;
+  const filas = d ? d.filas : [];
+  const max = Math.max(1, ...filas.map(f => f.kcal));
+  const lider = filas[0] && filas[0].kcal > 0 ? filas[0] : null;
+  const empate = lider && filas[1] && filas[1].kcal === lider.kcal;
+  const medalla = i => ['#ffd24d', '#cfd6df', '#e8b08a'][i] || 'var(--accent-2)';
+  let cuerpo = '';
+  if (RK.cargando && !d) cuerpo = '<div class="spin"></div>';
+  else if (RK.error && !d) cuerpo = `<div class="empty"><div class="bear">${bearSVG('worried')}</div>${esc(RK.error)}</div>`;
+  else if (d) {
+    cuerpo = `
+      <div class="rank-hero">
+        <div class="bear">${bearSVG(lider ? 'cheer' : 'sleepy')}</div>
+        <div><small class="muted">${rangoTexto(d)}</small>
+          <h2>${!lider ? 'Nadie ha quemado nada todavía' : empate ? '¡Van empatados!' : `¡${esc(lider.nombre)} va ganando!`}</h2>
+          ${lider && !empate ? `<p class="small" style="margin:4px 0 0">${fmt(lider.kcal)} kcal quemadas [[star]]</p>` : '<p class="small muted" style="margin:4px 0 0">A moverse [[heart]]</p>'}
+        </div>
+      </div>
+      <div class="list rank-list">${filas.map((f, i) => `
+        <div class="rank-row ${f.yo ? 'yo' : ''}">
+          <span class="pos" style="background:${f.kcal > 0 ? medalla(i) : '#f4ece9'}">${i + 1}</span>
+          <div class="in">
+            <b>${esc(f.nombre)}${f.yo ? ' <em>(tú)</em>' : ''}</b>
+            <small>${!f.empezo ? 'Todavía no empieza' : `${fmt(f.min)} min de ejercicio · ${f.dias} ${f.dias === 1 ? 'día activo' : 'días activos'}`}</small>
+            <div class="bar"><i style="width:${f.kcal / max * 100}%;background:${i === 0 && f.kcal > 0 ? 'linear-gradient(90deg,var(--accent),var(--red))' : 'var(--accent)'}"></i></div>
+            ${f.mejor && d.periodo !== 'hoy' ? `<small>Mejor día: ${fmtShort(f.mejor.dia)} · ${fmt(f.mejor.kcal)} kcal</small>` : ''}
+          </div>
+          <span class="kc">${fmt(f.kcal)}<small>kcal</small></span>
+        </div>`).join('')}</div>
+      ${RK.cargando ? '<div class="spin"></div>' : ''}`;
+  }
+  openSheet(`${sheetHead('Ranking')}
+    <div class="seg">${PERIODOS.map(([v, n]) => `<button class="${RK.periodo === v ? 'on' : ''}" data-act="rkp" data-v="${v}">${n}</button>`).join('')}</div>
+    ${S.demo ? '<p class="tip" style="margin-top:12px">Estás viendo datos de ejemplo; el ranking usa lo que está guardado en la nube.</p>' : ''}
+    ${cuerpo}
+    <p class="muted small" style="margin:14px 4px 0;line-height:1.5">Cuenta las calorías de <b>actividad</b>: el ejercicio que anotas más los pasos por encima de tu nivel de actividad. El metabolismo en reposo no cuenta, para que sea justo.</p>`);
+  RK.abierto = true; // openSheet acaba de correr el cleanup anterior
+  sheetCleanup = () => { RK.abierto = false; };
+}
+async function cargarRanking() {
+  RK.cargando = true; RK.error = ''; pintarRanking();
+  try {
+    const r = await api(`/api/ranking?periodo=${RK.periodo}&hoy=${todayKey()}`);
+    if (!r.ok) throw new Error(r.j.error || 'error');
+    RK.data = r.j;
+  } catch (e) {
+    RK.error = navigator.onLine ? 'No se pudo cargar el ranking' : 'Necesitas internet para ver el ranking';
+  }
+  RK.cargando = false; pintarRanking();
+}
+ACT.ranking = async () => {
+  RK.abierto = true; RK.data = null;
+  pintarRanking();
+  if (NB.meta.dirty && !S.demo) await subir(); // que lo último de hoy ya cuente
+  cargarRanking();
+};
+ACT.rkp = el => { RK.periodo = el.dataset.v; cargarRanking(); };

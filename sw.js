@@ -1,5 +1,5 @@
 // Funciona sin internet: guarda la app la primera vez que se abre.
-const CACHE = 'osita-v6';
+const CACHE = 'osita-v7';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'nube.js', 'demo.js', 'art.js', 'foods.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-180.png',
   'img/tori.png', 'img/kori-normal.jpg', 'img/kori-happy.jpg', 'img/kori-love.jpg', 'img/kori-worried.jpg', 'img/kori-sleepy.jpg',
   'img/kori-cheer.jpg', 'img/kori-berry.jpg', 'img/kori-eat.jpg', 'img/kori-skip.jpg', 'img/kori-water.jpg', 'img/tori-power.jpg'];

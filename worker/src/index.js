@@ -62,6 +62,44 @@ async function crearUsuario(env, usuario, pass) {
     .bind(usuario, sal, await hashPass(pass, sal), Date.now()).run();
 }
 
+/* ---------- Ranking de calorías quemadas en actividad ----------
+   Mismo cálculo que la app (app.js): ejercicio anotado + pasos por encima de los que
+   ya incluye su nivel de actividad. Las fechas son las del teléfono ("hoy" lo manda la app). */
+const PASOS_BASE = { 1.2: 3000, 1.375: 5000, 1.55: 7500, 1.725: 10000 };
+const diaUTC = k => { const [y, m, d] = k.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const claveUTC = d => d.toISOString().slice(0, 10);
+const INICIO = {
+  hoy: h => h,
+  semana: h => { const d = diaUTC(h); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return claveUTC(d); }, // desde el lunes
+  mes: h => h.slice(0, 8) + '01',
+  anio: h => h.slice(0, 5) + '01-01',
+  todo: () => '0000-00-00',
+};
+function resumenActividad(datos, desde, hasta, usuario) {
+  const vacio = { nombre: usuario, empezo: false, kcal: 0, min: 0, dias: 0, mejor: null };
+  if (!datos || !datos.profile) return vacio;
+  const prof = datos.profile;
+  const pesos = (datos.weights || []).slice().sort((a, b) => a.date < b.date ? -1 : 1);
+  const pesoEn = k => {
+    let w = null;
+    for (const e of pesos) { if (e.date <= k) w = e.kg; else break; }
+    return w ?? (pesos.length ? pesos[0].kg : prof.startWeight || 60);
+  };
+  const base = PASOS_BASE[prof.act] ?? 5000;
+  let kcal = 0, min = 0, dias = 0, mejor = null;
+  for (const [k, d] of Object.entries(datos.days || {})) {
+    if (k < desde || k > hasta) continue;
+    const ex = (d.ex || []).reduce((a, e) => a + (+e.kcal || 0), 0);
+    const pasos = Math.max(0, (+d.steps || 0) - base) * 0.00055 * pesoEn(k);
+    const total = ex + pasos;
+    kcal += total;
+    min += (d.ex || []).reduce((a, e) => a + (+e.min || 0), 0);
+    if (total > 0) dias++;
+    if (!mejor || total > mejor.kcal) mejor = { dia: k, kcal: Math.round(total) };
+  }
+  return { nombre: String(prof.name || usuario).slice(0, 40), empezo: true, kcal: Math.round(kcal), min, dias, mejor: mejor && mejor.kcal > 0 ? mejor : null };
+}
+
 export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
@@ -126,6 +164,17 @@ export default {
         const rev = b.rev + 1;
         await copiaDelDia(env, s.usuario, datosStr, rev);
         return json(req, { ok: true, rev, actualizado: ahora });
+      }
+
+      if (p === '/api/ranking' && req.method === 'GET') {
+        const hoy = url.searchParams.get('hoy') || '';
+        const periodo = url.searchParams.get('periodo') || 'semana';
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(hoy) || !(periodo in INICIO)) return json(req, { error: 'Parámetros' }, 400);
+        const desde = INICIO[periodo](hoy);
+        const { results } = await env.DB.prepare('SELECT u.usuario, d.json FROM usuarios u LEFT JOIN datos d ON d.usuario = u.usuario').all();
+        const filas = results.map(r => ({ usuario: r.usuario, yo: r.usuario === s.usuario, ...resumenActividad(r.json ? JSON.parse(r.json) : null, desde, hoy, r.usuario) }));
+        filas.sort((a, b) => b.kcal - a.kcal || b.min - a.min);
+        return json(req, { periodo, desde, hasta: hoy, filas });
       }
 
       if (p === '/api/copias' && req.method === 'GET') {

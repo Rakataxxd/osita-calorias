@@ -396,3 +396,26 @@ h1, h2, h3, h4 { font-family: var(--font-h); color: var(--ink); margin: 0; font-
 .nube-st.ok { background: var(--mint-soft); color: #2f8a5c; }
 .nube-st.warn { background: #fff3d6; color: #a06a00; }
 .nube-st.muted { background: #f4ece9; color: var(--muted); }
+
+/* Ranking */
+.rank-cta { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: linear-gradient(135deg, #fff, var(--accent-2)); }
+.rank-cta .rank-st { width: 64px; flex: none; }
+.rank-cta .in { flex: 1; }
+.rank-cta .in b { display: block; font-family: var(--font-h); font-size: 20px; color: var(--ink); font-weight: 600; }
+.rank-cta .in small { color: var(--muted); font-size: 13px; }
+.rank-cta > .ic { color: var(--accent-ink); }
+.rank-hero { display: flex; align-items: center; gap: 14px; background: var(--card); border-radius: 22px; padding: 14px; box-shadow: var(--shadow); margin-top: 12px; }
+.rank-hero .bear { width: 84px; flex: none; }
+.rank-hero h2 { font-size: 19px; margin-top: 2px; }
+.rank-list { margin-top: 12px; padding: 4px 12px; }
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1.5px dashed var(--line); }
+.rank-row:first-child { border-top: 0; }
+.rank-row .pos { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-h); font-weight: 700; color: var(--ink); flex: none; border: 2px solid #fff; box-shadow: 0 0 0 2px var(--line); }
+.rank-row .in { flex: 1; min-width: 0; }
+.rank-row .in b { display: block; color: var(--ink); font-size: 15.5px; }
+.rank-row .in b em { font-style: normal; color: var(--accent-ink); font-size: 13px; }
+.rank-row .in small { display: block; color: var(--muted); font-size: 12px; }
+.rank-row .bar { margin: 6px 0 3px; }
+.rank-row .kc { font-family: var(--font-h); font-size: 22px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1; }
+.rank-row .kc small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+.rank-row.yo .in b { color: var(--accent-ink); }

@@ -576,6 +576,7 @@ function viewYo() {
     <button class="btn soft" data-act="profile">${icon('edit')} Editar mis datos y metas</button>
   </section>
 
+  ${rankingCTA()}
   ${nubeCard()}
 
   <section class="card">
