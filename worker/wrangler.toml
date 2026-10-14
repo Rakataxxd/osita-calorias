@@ -6,7 +6,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "osita-calorias"
-database_id = "PENDIENTE"
+database_id = "da14abc3-28ec-46be-bab1-8f22f3e6ccc2"
 
 # Copia diaria de seguridad + limpieza de sesiones viejas
 [triggers]
