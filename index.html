@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Osita Calorías</title>
+<meta name="description" content="Cuenta tus calorías y llega a tu peso meta con tu osita.">
+<meta name="theme-color" content="#fde4ea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Osita">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="fresa">
+<div class="app" id="app">
+  <header class="top" id="top"></header>
+  <main id="view" class="view"></main>
+  <nav class="tabs" id="tabs">
+    <button data-tab="hoy" class="tab on"><span data-ic="home"></span><b>Hoy</b></button>
+    <button data-tab="diario" class="tab"><span data-ic="calendar"></span><b>Diario</b></button>
+    <button class="fab" id="fab" aria-label="Agregar comida"><span data-ic="plus"></span></button>
+    <button data-tab="peso" class="tab"><span data-ic="scale"></span><b>Peso</b></button>
+    <button data-tab="yo" class="tab"><span data-ic="user"></span><b>Yo</b></button>
+  </nav>
+</div>
+
+<div class="sheet-wrap" id="sheetWrap" hidden>
+  <div class="sheet-bg" data-close></div>
+  <section class="sheet" id="sheet" role="dialog" aria-modal="true"></section>
+</div>
+<div class="onb" id="onb" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="art.js"></script>
+<script src="foods.js"></script>
+<script src="app.js"></script>
+<script src="nube.js"></script>
+<script src="demo.js"></script>
+</body>
+</html>
